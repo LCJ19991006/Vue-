@@ -101,69 +101,159 @@
 <body>
     <div id="app">
         <div class="container">
-            <div class="cart">
-                <div class="title">我的商品</div>
-                <div>
-                    <div class="item">
-                        <img src="img/a.jpg" />
-                        <div class="name"></div>
-                        <div class="change">
-                            <a href="">－</a>
-                            <input type="text" class="num" />
-                            <a href="">＋</a>
-                        </div>
-                        <div class="del">×</div>
-                    </div>
-                    <div class="item">
-                        <img src="img/b.jpg" />
-                        <div class="name"></div>
-                        <div class="change">
-                            <a href="">－</a>
-                            <input type="text" class="num" />
-                            <a href="">＋</a>
-                        </div>
-                        <div class="del">×</div>
-                    </div>
-                    <div class="item">
-                        <img src="img/c.jpg" />
-                        <div class="name"></div>
-                        <div class="change">
-                            <a href="">－</a>
-                            <input type="text" class="num" />
-                            <a href="">＋</a>
-                        </div>
-                        <div class="del">×</div>
-                    </div>
-                    <div class="item">
-                        <img src="img/d.jpg" />
-                        <div class="name"></div>
-                        <div class="change">
-                            <a href="">－</a>
-                            <input type="text" class="num" />
-                            <a href="">＋</a>
-                        </div>
-                        <div class="del">×</div>
-                    </div>
-                    <div class="item">
-                        <img src="img/e.jpg" />
-                        <div class="name"></div>
-                        <div class="change">
-                            <a href="">－</a>
-                            <input type="text" class="num" />
-                            <a href="">＋</a>
-                        </div>
-                        <div class="del">×</div>
-                    </div>
-                </div>
-                <div class="total">
-                    <span>总价：123</span>
-                    <button>结算</button>
-                </div>
-            </div>
+            <my-cart></my-cart>
         </div>
     </div>
     <script type="text/javascript" src="js/vue.js"></script>
     <script type="text/javascript">
+        let CartTitle = {
+            props: ['user'],
+            template: `
+            <div class="title">{{user}}的商品</div>`
+        }
+        let CartList = {
+            props: ['list'],
+            template: `
+            <div>
+                <div class="item" :key="item.id" v-for="item in list">
+                    <img :src="item.img" />
+                    <div class="name">{{item.name}}</div>
+                    <div class="change">
+                        <a href="" @click.prevent="sub(item.id)">－</a>
+                        <input type="text" class="num" :value="item.num" @blur="changenum(item.id,$event)"/>
+                        <a href="" @click.prevent="add(item.id)">＋</a>
+                    </div>
+                    <div class="del" @click="del(item.id)">×</div>
+                </div>
+            </div>`,
+            methods: {
+                del: function(id) {
+                    this.$emit('cart-del', id);
+                },
+                changenum: function(id, event) {
+                    this.$emit('change-num', {
+                        id: id,
+                        type: 'change',
+                        num: event.target.value
+                    });
+                },
+                sub: function(id) {
+                    this.$emit('change-num', {
+                        id: id,
+                        type: 'sub'
+                    });
+                },
+                add: function(id) {
+                    this.$emit('change-num', {
+                        id: id,
+                        type: 'add'
+                    });
+                },
+            }
+        }
+        let CartTotal = {
+            props: ['list'],
+            template: `
+            <div class="total">
+                <span>总价：{{total}}</span>
+                <button>结算</button>
+            </div>`,
+            computed: {
+                total: function() {
+                    let t = 0;
+                    this.list.forEach(item => {
+                        t += (item.price * item.num);
+                    });
+                    return t;
+                }
+            }
+        }
+        Vue.component('my-cart', {
+            data: function() {
+                return {
+                    user: '张三',
+                    list: [{
+                        id: 1,
+                        name: 'TCL彩电',
+                        price: 1000,
+                        num: 1,
+                        img: 'img/a.jpg'
+                    }, {
+                        id: 2,
+                        name: '机顶盒',
+                        price: 1000,
+                        num: 1,
+                        img: 'img/b.jpg'
+                    }, {
+                        id: 3,
+                        name: '海尔冰箱',
+                        price: 1000,
+                        num: 1,
+                        img: 'img/c.jpg'
+                    }, {
+                        id: 4,
+                        name: '小米手机',
+                        price: 1000,
+                        num: 1,
+                        img: 'img/d.jpg'
+                    }, {
+                        id: 5,
+                        name: 'PPTV电视',
+                        price: 1000,
+                        num: 2,
+                        img: 'img/e.jpg'
+                    }]
+                }
+            },
+            template: `
+            <div class="cart">
+                <cart-title :user="user"></cart-title>
+                <cart-list :list="list" @cart-del="delCart($event)" @change-num="changenum($event)"></cart-list>
+                <cart-total :list="list"></cart-total>
+            </div>`,
+            components: {
+                'cart-title': CartTitle,
+                'cart-list': CartList,
+                'cart-total': CartTotal
+            },
+            methods: {
+                delCart: function(id) {
+                    let index = this.list.findIndex(item => {
+                        return item.id == id;
+                    });
+                    this.list.splice(index, 1);
+                },
+                changenum: function(val) {
+                    if (val.type == 'change') {
+                        this.list.some(item => {
+                            if (item.id == val.id) {
+                                item.num = val.num;
+                                return true;
+                            }
+                        });
+                    } else if (val.type == 'sub') {
+                        this.list.some(item => {
+                            if (item.id == val.id) {
+                                item.num -= 1;
+                                return true;
+                            }
+                        });
+                    } else if (val.type == 'add') {
+                        this.list.some(item => {
+                            if (item.id == val.id) {
+                                item.num += 1;
+                                return true;
+                            }
+                        });
+                    }
+                }
+            }
+        });
+        let vm = new Vue({
+            el: '#app',
+            data: {},
+            methods: {}
+        });
     </script>
 </body>
 

@@ -58,11 +58,11 @@
                         <label for="id">
                       编号：
                     </label>
-                        <input type="text" id="id" v-model='id' :disabled='flag' v-focus>
+                        <input type="text" id="id" v-model='id' disabled='false'>
                         <label for="name">
                       名称：
                     </label>
-                        <input type="text" id="name" v-model='name'>
+                        <input type="text" id="name" v-model='name' v-focus>
                         <button @click='handle' :disabled='submitFlag'>提交</button>
                     </div>
                 </div>
@@ -97,11 +97,17 @@
         </div>
     </div>
     <script type="text/javascript" src="js/vue.js"></script>
+    <script type="text/javascript" src="js/axios.js"></script>
     <script type="text/javascript">
         // 图书管理-图书列表展示功能
         // 注意事项：<a href="" @click.prevent>修改</a>
         // 事件绑定时，可以只添加修饰符，而不绑定事件函数
-
+        axios.defaults.baseURL = 'http://localhost:3000/';
+        axios.interceptors.response.use(function(res) {
+            return res.data;
+        }, function() {
+            console.log('error');
+        });
         Vue.directive('focus', {
             inserted: function(el) {
                 el.focus();
@@ -155,39 +161,41 @@
                 books: []
             },
             methods: {
-                handle: function() {
+                queryData: async function() {
+                    this.books = await axios.get('books');
+                },
+                handle: async function() {
                     if (this.flag) {
-                        this.books.some((item) => {
-                            if (item.id == this.id) {
-                                item.name = this.name;
-                                return true;
-                            }
+                        let ret = await axios.put('books/' + this.id, {
+                            name: this.name,
                         });
+                        if (ret.status == 200) {
+                            this.queryData();
+                        }
                         this.flag = false;
                     } else {
-                        let newBook = {};
-                        newBook.id = this.id;
-                        newBook.name = this.name;
-                        newBook.date = '';
-                        this.books.push(newBook);
+                        let ret = await axios.post('books', {
+                            name: this.name
+                        });
+                        if (ret.status == 200) {
+                            this.queryData();
+                        }
                     }
                     this.flag = false;
                     this.id = '';
                     this.name = '';
                 },
-                toEdit: function(id) {
-                    this.id = id;
-                    let name = this.books.filter(function(item) {
-                        return item.id == id
-                    });
-                    this.name = name[0].name;
+                toEdit: async function(id) {
+                    let ret = await axios.get('books/' + id);
+                    this.id = ret.id;
+                    this.name = ret.name;
                     this.flag = true;
                 },
-                deleteBook: function(id) {
-                    let index = this.books.findIndex(function(item) {
-                        return item.id == id;
-                    });
-                    this.books.splice(index, 1);
+                deleteBook: async function(id) {
+                    let ret = await axios.delete('books/' + id);
+                    if (ret.status == 200) {
+                        this.queryData();
+                    }
                 }
             },
             computed: {
@@ -196,31 +204,23 @@
                 }
             },
             watch: {
-                name: function(val) {
-                    this.submitFlag = this.books.some(function(item) {
-                        return item.name == val;
-                    });
+                name: async function(val) {
+                    // this.submitFlag = this.books.some(function(item) {
+                    //     return item.name == val;
+                    // });
+                    let ret = await axios.get('books/book/' + this.name);
+                    if (ret.status == 1) {
+                        this.submitFlag = true;
+                    } else {
+                        this.submitFlag = false;
+                    }
                 }
             },
             mounted: function() {
-                let data = [{
-                    id: 1,
-                    name: '三国演义',
-                    date: 2525609975000
-                }, {
-                    id: 2,
-                    name: '水浒传',
-                    date: 2525609975000
-                }, {
-                    id: 3,
-                    name: '红楼梦',
-                    date: 2525609975000
-                }, {
-                    id: 4,
-                    name: '西游记',
-                    date: 2525609975000
-                }];
-                this.books = data;
+                // axios.get('books').then((data) => {
+                //     this.books = data.data;
+                // });
+                this.queryData();
             }
         });
     </script>
